@@ -50,9 +50,20 @@ for (const route of cfg.routes) {
   targets.set(route.domain, {...route, row, agent});
 }
 
+const renderHostname = String(process.env.RENDER_EXTERNAL_HOSTNAME || '').trim().toLowerCase().replace(/\.$/, '');
+const renderTarget = renderHostname.endsWith('.onrender.com') && targets.size === 1
+  ? targets.values().next().value : undefined;
+
+function resolveTarget(host) {
+  if (cfg.legacy) return targets.values().next().value;
+  // Only this service's official hostname can alias an unambiguous destination.
+  // Reuse the configured target, including its verified origin SNI and agent.
+  return targets.get(host) || (host === renderHostname ? renderTarget : undefined);
+}
+
 function metrics() {
   const origins = [...counters.values()];
-  const sample = {engine: 'node', build: 'ren-node-3', mode: 'http1-experimental',
+  const sample = {engine: 'node', build: 'ren-node-4', mode: 'http1-experimental',
     instance: process.env.RENDER_INSTANCE_ID || os.hostname(), generation: 0,
     current_workers: 1, draining_workers: 0, uptime_s: (performance.now() - started) / 1000,
     active, peak, websocket_supported: true, http_status_metrics_available: true,
@@ -126,7 +137,7 @@ const server = http.createServer(async (req, res) => {
     return res.end('{"status":"ok"}');
   }
   const host = String(req.headers.host || '').toLowerCase().split(':', 1)[0].replace(/\.$/, '');
-  const target = cfg.legacy ? targets.values().next().value : targets.get(host);
+  const target = resolveTarget(host);
   if (!target) return reply(req, res, 421, 'Unknown domain');
   if (!allowed.has(req.method)) return reply(req, res, 405, 'Allowed methods: GET, HEAD, POST');
   const row = target.row;
@@ -247,7 +258,7 @@ server.on('upgrade', async (req, socket, head) => {
     return rejectSocket(socket, '400 Bad Request');
   }
   const host = String(req.headers.host || '').toLowerCase().split(':', 1)[0].replace(/\.$/, '');
-  const target = cfg.legacy ? targets.values().next().value : targets.get(host);
+  const target = resolveTarget(host);
   if (!target) return rejectSocket(socket, '421 Misdirected Request');
   const row = target.row;
   const unavailable = () => {

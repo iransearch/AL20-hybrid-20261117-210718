@@ -187,3 +187,14 @@ Node supports HTTP/1.1 XHTTP and WebSocket on the same listener and domain mappi
 CONNECT_TIMEOUT covers TCP/TLS; WS_HANDSHAKE_TIMEOUT starts after verified TLS; TUNNEL_IDLE_TIMEOUT applies after 101. Existing HTTP_READ_TIMEOUT applies to HTTP. MAX_CONCURRENT is shared across HTTP and WebSocket, including cluster workers, and defaults to unlimited (0). Active counts include handshakes and HTTP; websocket_active counts established tunnels. bytes_scope is HTTP_payload_body_and_WebSocket_frames, excluding HTTP/TLS headers. SIGTERM allows 20 seconds to drain, then closes upgraded and ordinary sockets.
 
 Update the existing Node service with gateway-code-only. No new service or engine change is needed. Local TLS tests do not establish production Xray compatibility or Render capacity.
+
+## Official Render hostname (ren-node-4)
+
+When exactly one destination is configured, Node also accepts the service's own
+`RENDER_EXTERNAL_HOSTNAME` for HTTP and WebSocket requests. It uses the existing
+destination's IP, verified TLS SNI and connection pool. Other hostnames still
+receive 421. With multiple destinations, use their explicit custom hostnames;
+the official Render hostname does not silently select the first destination.
+
+Run the HTTP/TLS/WebSocket regression tests with Node and OpenSSL installed:
+`node --test tests/render_hostname.test.mjs`.
