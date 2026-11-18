@@ -190,11 +190,6 @@ Update the existing Node service with gateway-code-only. No new service or engin
 
 ## Official Render hostname (ren-node-4)
 
-When exactly one destination is configured, Node also accepts the service's own
-`RENDER_EXTERNAL_HOSTNAME` for HTTP and WebSocket requests. It uses the existing
-destination's IP, verified TLS SNI and connection pool. Other hostnames still
-receive 421. With multiple destinations, use their explicit custom hostnames;
-the official Render hostname does not silently select the first destination.
+With exactly one configured destination, the Node engine also accepts this service's exact official hostname from Render's `RENDER_EXTERNAL_HOSTNAME` environment variable for HTTP and WebSocket. It reuses the configured origin IP, TLS port, verified SNI and connection agent. No custom-domain registration of the `.onrender.com` hostname is needed.
 
-Run the HTTP/TLS/WebSocket regression tests with Node and OpenSSL installed:
-`node --test tests/render_hostname.test.mjs`.
+Unrelated hostnames remain rejected. With multiple configured destinations, use their explicit custom hostnames; the official Render hostname does not select a default destination. Legacy single-origin routing is unchanged. Do not replace the X-UI origin certificate hostname with the Render hostname.
